@@ -1,11 +1,12 @@
 import json
 from io import BytesIO
 from pprint import pprint
+
 import openai
 import requests
 import uvicorn
-from pydantic import BaseModel, BaseSettings
 from fastapi import FastAPI, Response
+from pydantic import BaseModel, BaseSettings
 
 app = FastAPI()
 
@@ -84,7 +85,7 @@ def get_card_image(card_details: CardDetails, card_art: bytes) -> bytes:
             'topleftY': 10,
             'topleftX': 60,
         },
-        files={'userfile': BytesIO(card_art)}
+        files={'userfile': BytesIO(card_art)},
     )
     card_image_id = card_image_response.json()['cardid']
     return requests.get(f'https://www.hearthcards.net/cards/{card_image_id}.png').content
