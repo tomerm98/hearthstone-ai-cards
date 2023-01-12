@@ -1,8 +1,13 @@
+import json
 from io import BytesIO
 from pprint import pprint
 import openai
 import requests
+import uvicorn
 from pydantic import BaseModel, BaseSettings
+from fastapi import FastAPI, Response
+
+app = FastAPI()
 
 
 class Settings(BaseSettings):
@@ -31,21 +36,25 @@ class CardDetails(BaseModel):
 
 def get_prompt(description: str) -> str:
     return (
-        f'Design a Hearthstone card.\n'
-        f'Respond in JSON format with these fields: {", ".join(CardDetails.__fields__.keys())}\n'
-        f'Missing fields should have null value\n'
+        f'Design a Hearthstone card. '
+        f'Respond with these fields: {", ".join(CardDetails.__fields__.keys())}. '
+        f'Your response must be a valid JSON object with no extra characters. '
+        f'Missing fields should have null value. '
         f'Extra details about the card: {description}'
     )
 
 
 def get_card_details(description: str) -> CardDetails:
-    raw_card_details = openai.Completion.create(
+    card_details_response = openai.Completion.create(
         model=settings.model,
         prompt=get_prompt(description),
         temperature=settings.temperature,
         max_tokens=settings.max_tokens,
     )
-    return CardDetails.parse_raw(raw_card_details['choices'][0]['text'])
+    raw_card_details = card_details_response['choices'][0]['text'].strip()
+    print('Raw card details:')
+    print(raw_card_details)
+    return CardDetails.parse_raw(raw_card_details)
 
 
 def get_card_art(card_name: str) -> bytes:
@@ -79,8 +88,8 @@ def get_card_image(card_details: CardDetails, card_art: bytes) -> bytes:
     return requests.get(f'https://www.hearthcards.net/cards/{card_image_id}.png').content
 
 
-def main() -> None:
-    description = input('Enter Card Description: ')
+@app.get('/card/{description}')
+def get_card(description: str) -> Response:
     print('Generating card details...')
     card_details = get_card_details(description)
     print('Card details:')
@@ -89,7 +98,8 @@ def main() -> None:
     card_art = get_card_art(card_details.name)
     print('Generating card image...')
     card_image = get_card_image(card_details, card_art)
+    return Response(content=card_image, media_type="image/png")
 
 
 if __name__ == '__main__':
-    main()
+    uvicorn.run(app, host='0.0.0.0', port=8000)
