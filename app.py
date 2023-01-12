@@ -35,13 +35,15 @@ class CardDetails(BaseModel):
 
 
 def get_prompt(description: str) -> str:
-    return (
-        f'Design a Hearthstone card. '
-        f'Respond with these fields: {", ".join(CardDetails.__fields__.keys())}. '
-        f'Your response must be a valid JSON object with no extra characters. '
-        f'Missing fields should have null value. '
-        f'Extra details about the card: {description}'
-    )
+    return f'''
+    Design a Hearthstone card.
+    Your response should be the card details in JSON format.
+    The card details must have these fields: {", ".join(CardDetails.__fields__.keys())}.
+    Missing fields should have a null value.
+    Extra details about the card: {description}
+    
+    Card Details:
+    '''
 
 
 def get_card_details(description: str) -> CardDetails:
